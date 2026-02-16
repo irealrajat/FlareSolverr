@@ -1,0 +1,45 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-with-flaresolverr:
+    runs-on: ubuntu-latest
+    
+    services:
+      flaresolverr:
+        image: ghcr.io/flaresolverr/flaresolverr:latest
+        ports:
+          - 8191:8191
+        options: >-
+          --health-cmd "curl -f http://localhost:8191/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Wait for FlareSolverr to be ready
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:8191/health; do sleep 2; done'
+      
+      - name: Test FlareSolverr
+        run: |
+          curl -X POST http://localhost:8191/v1 \
+            -H "Content-Type: application/json" \
+            -d '{
+              "cmd": "request.get",
+              "url": "https://example.com",
+              "maxTimeout": 60000
+            }'
+      
+      - name: Your scraping script
+        run: |
+          # Add your actual scraping/testing logic here
+          # FlareSolverr is available at http://localhost:8191
+          echo "FlareSolverr is running and ready to use"
